@@ -17,6 +17,9 @@ st.set_page_config(
 # Custom CSS for clean, spacious UI
 clean_style = """
 <style>
+    /* Hide all default Streamlit UI elements */
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     
     /* Main content area styling - reduced padding */
     .main .block-container {
@@ -26,13 +29,22 @@ clean_style = """
         padding-right: 2rem;
     }
     
-    /* Sidebar styling */
+    /* Sidebar styling that works in both light and dark modes */
     [data-testid="stSidebar"] {
-        background-color: #f8f9fa;
         padding: 1rem 1rem;
     }
     
-    /* Smaller chat message styling */
+    /* Dark mode sidebar background */
+    [theme="dark"] [data-testid="stSidebar"] {
+        background-color: #1a1a1a;
+    }
+    
+    /* Light mode sidebar background */
+    [theme="light"] [data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+    }
+    
+    /* Chat message styling */
     .message {
         padding: 0.5rem 0.75rem;
         margin: 0.25rem 0;
@@ -56,6 +68,12 @@ clean_style = """
         border-bottom-left-radius: 0.1rem;
     }
     
+    /* Dark mode adjustments for other-message */
+    [theme="dark"] .other-message {
+        background-color: #2d3741;
+        color: white;
+    }
+    
     /* Input area styling */
     .stTextArea textarea {
         min-height: 80px;
@@ -63,7 +81,45 @@ clean_style = """
         padding: 0.75rem;
     }
     
-    /* Remove spacer classes since we're reducing space */
+    /* Button styling that works in both modes */
+    .stButton button {
+        width: 100%;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+    
+    /* Dark mode button adjustments */
+    [theme="dark"] .stButton button {
+        background-color: #2d3741;
+        color: white;
+        border-color: #4a5568;
+    }
+    
+    /* Active user button styling */
+    .user-button {
+        width: 100%;
+        text-align: left;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 0.25rem;
+        transition: all 0.2s;
+    }
+    
+    /* Dark mode active user button */
+    [theme="dark"] .user-button {
+        background-color: #2d3741;
+        color: white;
+        border: 1px solid #4a5568;
+    }
+    
+    /* Light mode active user button */
+    [theme="light"] .user-button {
+        background-color: #ffffff;
+        color: black;
+        border: 1px solid #e9ecef;
+    }
 </style>
 """
 
