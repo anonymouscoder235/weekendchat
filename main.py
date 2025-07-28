@@ -81,7 +81,7 @@ hide_streamlit_style = """
 """
 
 # Apply CSS
-#st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Configuration
 CHAT_FILE = "private_chat_data.json"
@@ -140,7 +140,28 @@ def register_user(username, password):
     with open(USER_FILE, "w") as f:
         json.dump(users, f)
     
+    # Create presence record in chat data
+    update_user_presence(username)
+    
     return True
+
+# Update user presence
+def update_user_presence(username):
+    """Update or create user presence record"""
+    data = load_chat_data()
+    
+    # Initialize users dictionary if it doesn't exist
+    if "users" not in data:
+        data["users"] = {}
+    
+    # Create or update user record
+    if username not in data["users"]:
+        data["users"][username] = {}
+    
+    # Update last seen time
+    data["users"][username]["last_seen"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    save_chat_data(data)
 
 # User authentication
 def authenticate_user(username, password):
@@ -165,6 +186,10 @@ def load_chat_data():
                 session["participants"][0]: False,
                 session["participants"][1]: False
             }
+    
+    # Ensure users dictionary exists
+    if "users" not in data:
+        data["users"] = {}
     
     return data
 
@@ -212,6 +237,9 @@ def add_message(session_id, sender, message):
         "timestamp": timestamp
     })
     
+    # Update sender's presence
+    update_user_presence(sender)
+    
     save_chat_data(data)
 
 # Check if user has any unread messages
@@ -235,6 +263,9 @@ def auth_page():
             password = st.text_input("Password", type="password", key="login_password")
             if st.form_submit_button("Login"):
                 if authenticate_user(username, password):
+                    # Update user presence
+                    update_user_presence(username)
+                    
                     st.session_state.username = username
                     st.session_state.authenticated = True
                     st.rerun()
@@ -261,6 +292,10 @@ def auth_page():
 
 # Main chat app
 def main_app():
+    # Update user presence on every refresh
+    if "username" in st.session_state:
+        update_user_presence(st.session_state.username)
+    
     st.title("🔒 Private Chat Sessions")
     
     # User management
@@ -289,8 +324,12 @@ def main_app():
             if user == username:
                 continue
             last_seen_str = info.get("last_seen", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            last_seen = datetime.strptime(last_seen_str, "%Y-%m-%d %H:%M:%S")
-            if (datetime.now() - last_seen).seconds < 300:  # 5 minutes
+            try:
+                last_seen = datetime.strptime(last_seen_str, "%Y-%m-%d %H:%M:%S")
+                if (datetime.now() - last_seen).seconds < 300:  # 5 minutes
+                    active_users.append(user)
+            except:
+                # If there's an error parsing timestamp, include user anyway
                 active_users.append(user)
         
         st.write("**Start a private chat with:**")
@@ -355,11 +394,6 @@ def main_app():
         if st.form_submit_button("Send"):
             if message.strip():
                 add_message(session_id, username, message.strip())
-                # Update user's last seen time
-                data = load_chat_data()
-                if username in data["users"]:
-                    data["users"][username]["last_seen"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                save_chat_data(data)
                 st.rerun()
 
 # Main app flow
