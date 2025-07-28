@@ -18,86 +18,52 @@ st.set_page_config(
 clean_style = """
 <style>
     
-    
-    /* Main content area styling */
+    /* Main content area styling - reduced padding */
     .main .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        padding-left: 3rem;
-        padding-right: 3rem;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
     }
     
     /* Sidebar styling */
     [data-testid="stSidebar"] {
         background-color: #f8f9fa;
-        padding: 2rem 1.5rem;
+        padding: 1rem 1rem;
     }
     
-    /* Chat message styling */
+    /* Smaller chat message styling */
     .message {
-        padding: 1rem;
-        margin: 0.5rem 0;
-        border-radius: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        margin: 0.25rem 0;
+        border-radius: 0.5rem;
         max-width: 70%;
         word-wrap: break-word;
+        line-height: 1.4;
     }
     
     .user-message {
         background-color: #007bff;
         color: white;
         margin-left: auto;
-        border-bottom-right-radius: 0.25rem;
+        border-bottom-right-radius: 0.1rem;
     }
     
     .other-message {
         background-color: #e9ecef;
         color: black;
         margin-right: auto;
-        border-bottom-left-radius: 0.25rem;
+        border-bottom-left-radius: 0.1rem;
     }
     
     /* Input area styling */
     .stTextArea textarea {
-        min-height: 100px;
+        min-height: 80px;
         border-radius: 0.5rem;
-        padding: 1rem;
+        padding: 0.75rem;
     }
     
-    /* Button styling */
-    .stButton button {
-        width: 100%;
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-        transition: all 0.2s;
-    }
-    
-    .stButton button:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-    }
-    
-    /* Spacing utilities */
-    .spacer-sm {
-        height: 1rem;
-    }
-    
-    .spacer-md {
-        height: 2rem;
-    }
-    
-    .spacer-lg {
-        height: 3rem;
-    }
-    
-    /* Remove extra padding from tabs */
-    [data-baseweb="tab-list"] {
-        gap: 0.5rem;
-    }
-    
-    [data-baseweb="tab"] {
-        padding: 0.5rem 1rem;
-        margin: 0;
-    }
+    /* Remove spacer classes since we're reducing space */
 </style>
 """
 
