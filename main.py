@@ -14,13 +14,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for clean, spacious UI
+# Custom CSS for clean UI
 clean_style = """
 <style>
-    /* Hide all default Streamlit UI elements */
+    /* Hide default UI elements */
     
-    
-    /* Main content area styling - reduced padding */
+    /* Main content styling */
     .main .block-container {
         padding-top: 1rem;
         padding-bottom: 1rem;
@@ -28,22 +27,20 @@ clean_style = """
         padding-right: 2rem;
     }
     
-    /* Sidebar styling that works in both light and dark modes */
+    /* Sidebar styling */
     [data-testid="stSidebar"] {
         padding: 1rem 1rem;
     }
     
-    /* Dark mode sidebar background */
+    /* Dark mode support */
     [theme="dark"] [data-testid="stSidebar"] {
         background-color: #1a1a1a;
     }
-    
-    /* Light mode sidebar background */
     [theme="light"] [data-testid="stSidebar"] {
         background-color: #f8f9fa;
     }
     
-    /* Chat message styling */
+    /* Message bubbles */
     .message {
         padding: 0.5rem 0.75rem;
         margin: 0.25rem 0;
@@ -52,72 +49,19 @@ clean_style = """
         word-wrap: break-word;
         line-height: 1.4;
     }
-    
     .user-message {
         background-color: #007bff;
         color: white;
         margin-left: auto;
-        border-bottom-right-radius: 0.1rem;
     }
-    
     .other-message {
         background-color: #e9ecef;
         color: black;
         margin-right: auto;
-        border-bottom-left-radius: 0.1rem;
     }
-    
-    /* Dark mode adjustments for other-message */
     [theme="dark"] .other-message {
         background-color: #2d3741;
         color: white;
-    }
-    
-    /* Input area styling */
-    .stTextArea textarea {
-        min-height: 80px;
-        border-radius: 0.5rem;
-        padding: 0.75rem;
-    }
-    
-    /* Button styling that works in both modes */
-    .stButton button {
-        width: 100%;
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-        transition: all 0.2s;
-        border: 1px solid transparent;
-    }
-    
-    /* Dark mode button adjustments */
-    [theme="dark"] .stButton button {
-        background-color: #2d3741;
-        color: white;
-        border-color: #4a5568;
-    }
-    
-    /* Active user button styling */
-    .user-button {
-        width: 100%;
-        text-align: left;
-        padding: 0.5rem;
-        border-radius: 0.5rem;
-        margin-bottom: 0.25rem;
-        transition: all 0.2s;
-    }
-    
-    /* Dark mode active user button */
-    [theme="dark"] .user-button {
-        background-color: #2d3741;
-        color: white;
-        border: 1px solid #4a5568;
-    }
-    
-    /* Light mode active user button */
-    [theme="light"] .user-button {
-        background-color: #ffffff;
-        color: black;
-        border: 1px solid #e9ecef;
     }
     
     /* Timestamp styling */
@@ -125,49 +69,51 @@ clean_style = """
         font-size: 0.75rem;
         opacity: 0.8;
     }
+    
+    /* Input area */
+    .stTextArea textarea {
+        min-height: 80px;
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+    }
+    
+    /* Buttons */
+    .stButton button {
+        width: 100%;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+    }
+    [theme="dark"] .stButton button {
+        background-color: #2d3741;
+        color: white;
+    }
 </style>
 """
 
-# JavaScript for client-side timezone conversion
+# JavaScript for timezone conversion
 timezone_js = """
 <script>
-// Function to convert UTC timestamp to local time
-function convertTimestamps() {
-    // Get all elements with data-utc attribute
-    const timeElements = document.querySelectorAll('[data-utc]');
-    
-    timeElements.forEach(element => {
-        const utcTimestamp = element.getAttribute('data-utc');
-        if (utcTimestamp) {
-            try {
-                const date = new Date(utcTimestamp);
-                const options = { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    hour12: false
-                };
-                const localTime = date.toLocaleTimeString(undefined, options);
-                
-                // Check if we need to show sender name
-                const currentText = element.textContent;
-                if (currentText.includes('•')) {
-                    const sender = currentText.split('•')[0].trim();
-                    element.textContent = `${sender} • ${localTime}`;
-                } else {
-                    element.textContent = localTime;
-                }
-            } catch (e) {
-                console.error('Error converting timestamp:', e);
+function updateTimestamps() {
+    document.querySelectorAll('[data-utc]').forEach(el => {
+        const utcTime = el.getAttribute('data-utc');
+        try {
+            const timeStr = new Date(utcTime).toLocaleTimeString([], 
+                {hour: '2-digit', minute:'2-digit', hour12: false});
+            if (el.textContent.includes('•')) {
+                const sender = el.textContent.split('•')[0].trim();
+                el.textContent = `${sender} • ${timeStr}`;
+            } else {
+                el.textContent = timeStr;
             }
+        } catch(e) {
+            console.error('Timestamp error:', e);
         }
     });
 }
 
-// Run the conversion when page loads
-document.addEventListener('DOMContentLoaded', convertTimestamps);
-
-// Also run after Streamlit updates the DOM
-document.addEventListener('streamlit:render', convertTimestamps);
+// Run on load and after updates
+document.addEventListener('DOMContentLoaded', updateTimestamps);
+document.addEventListener('streamlit:render', updateTimestamps);
 </script>
 """
 
@@ -179,7 +125,7 @@ CHAT_FILE = "private_chat_data.json"
 USER_FILE = "user_credentials.json"
 REFRESH_INTERVAL = 2000  # milliseconds
 
-# Initialize data files if they don't exist
+# Initialize data files
 if not os.path.exists(CHAT_FILE):
     with open(CHAT_FILE, "w") as f:
         json.dump({"sessions": {}, "users": {}}, f)
@@ -188,112 +134,70 @@ if not os.path.exists(USER_FILE):
     with open(USER_FILE, "w") as f:
         json.dump({}, f)
 
-# Auto-refresh the app
+# Auto-refresh
 st_autorefresh(interval=REFRESH_INTERVAL, limit=None, key="chat_refresh")
 
-# Password hashing functions
+# Password hashing
 def hash_password(password):
-    """Hash a password for storing."""
     salt = os.urandom(32)
-    key = hashlib.pbkdf2_hmac(
-        'sha256',
-        password.encode('utf-8'),
-        salt,
-        100000
-    )
+    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
     return salt + key
 
 def verify_password(stored_password, provided_password):
-    """Verify a stored password against one provided by user"""
     salt = stored_password[:32]
     stored_key = stored_password[32:]
-    new_key = hashlib.pbkdf2_hmac(
-        'sha256',
-        provided_password.encode('utf-8'),
-        salt,
-        100000
-    )
+    new_key = hashlib.pbkdf2_hmac('sha256', provided_password.encode('utf-8'), salt, 100000)
     return hmac.compare_digest(stored_key, new_key)
 
-# User registration
+# User management
 def register_user(username, password):
     with open(USER_FILE, "r") as f:
         users = json.load(f)
-    
     if username in users:
-        return False  # User already exists
-    
+        return False
     users[username] = {
         'password': hash_password(password).hex(),
         'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
-    
     with open(USER_FILE, "w") as f:
         json.dump(users, f)
-    
-    # Create presence record in chat data
     update_user_presence(username)
-    
     return True
 
-# Update user presence
 def update_user_presence(username):
-    """Update or create user presence record"""
     data = load_chat_data()
-    
-    # Initialize users dictionary if it doesn't exist
     if "users" not in data:
         data["users"] = {}
-    
-    # Create or update user record
-    if username not in data["users"]:
-        data["users"][username] = {}
-    
-    # Update last seen time
-    data["users"][username]["last_seen"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
+    data["users"][username] = {"last_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
     save_chat_data(data)
 
-# User authentication
 def authenticate_user(username, password):
     with open(USER_FILE, "r") as f:
         users = json.load(f)
-    
     if username not in users:
         return False
-    
     stored_password = bytes.fromhex(users[username]['password'])
     return verify_password(stored_password, password)
 
-# Load chat data
+# Chat management
 def load_chat_data():
     with open(CHAT_FILE, "r") as f:
         data = json.load(f)
-    
-    # Migration: Add 'unread' field to existing sessions if missing
-    for session_id, session in data.get("sessions", {}).items():
+    for session in data.get("sessions", {}).values():
         if "unread" not in session:
-            session["unread"] = {
-                session["participants"][0]: False,
-                session["participants"][1]: False
-            }
-    
-    # Ensure users dictionary exists
+            p1, p2 = session["participants"]
+            session["unread"] = {p1: False, p2: False}
     if "users" not in data:
         data["users"] = {}
-    
     return data
 
-# Save chat data
 def save_chat_data(data):
     with open(CHAT_FILE, "w") as f:
         json.dump(data, f)
 
-# Get or create session
 def get_session(user1, user2):
     session_id = f"{min(user1, user2)}_{max(user1, user2)}"
     data = load_chat_data()
-    
     if session_id not in data["sessions"]:
         data["sessions"][session_id] = {
             "participants": [user1, user2],
@@ -302,197 +206,149 @@ def get_session(user1, user2):
             "unread": {user1: False, user2: False}
         }
         save_chat_data(data)
-    elif "unread" not in data["sessions"][session_id]:
-        # Ensure unread exists (backward compatibility)
-        data["sessions"][session_id]["unread"] = {
-            user1: False,
-            user2: False
-        }
-        save_chat_data(data)
-    
     return session_id
 
-# Add a new message
 def add_message(session_id, sender, message):
     data = load_chat_data()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # Mark as unread for the recipient
     participants = data["sessions"][session_id]["participants"]
     recipient = participants[0] if participants[1] == sender else participants[1]
     data["sessions"][session_id]["unread"][recipient] = True
-    
     data["sessions"][session_id]["messages"].append({
         "sender": sender,
         "message": message,
         "timestamp": timestamp
     })
-    
-    # Update sender's presence
     update_user_presence(sender)
-    
     save_chat_data(data)
 
-# Check unread messages
 def check_unread_messages(username):
     data = load_chat_data()
-    for session_id, session in data.get("sessions", {}).items():
+    for session in data.get("sessions", {}).values():
         if username in session["participants"] and session["unread"].get(username, False):
-            other_user = session["participants"][0] if session["participants"][1] == username else session["participants"][1]
-            return other_user
+            return session["participants"][0] if session["participants"][1] == username else session["participants"][1]
     return None
 
 # Authentication Page
 def auth_page():
     st.title("Secure Chat")
-    
     tab1, tab2 = st.tabs(["Login", "Register"])
     
     with tab1:
-        st.subheader("Welcome back")
         with st.form("login_form"):
-            username = st.text_input("Username", key="login_username")
-            password = st.text_input("Password", type="password", key="login_password")
-            if st.form_submit_button("Login", use_container_width=True):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            if st.form_submit_button("Login"):
                 if authenticate_user(username, password):
-                    update_user_presence(username)
                     st.session_state.username = username
                     st.session_state.authenticated = True
                     st.rerun()
                 else:
-                    st.error("Invalid username or password")
+                    st.error("Invalid credentials")
     
     with tab2:
-        st.subheader("Create an account")
         with st.form("register_form"):
-            username = st.text_input("Username", key="register_username")
-            password = st.text_input("Password", type="password", key="register_password")
-            confirm_password = st.text_input("Confirm Password", type="password", key="confirm_password")
-            if st.form_submit_button("Register", use_container_width=True):
-                if password != confirm_password:
-                    st.error("Passwords do not match")
-                elif len(username) < 3:
-                    st.error("Username must be at least 3 characters")
-                elif len(password) < 6:
-                    st.error("Password must be at least 6 characters")
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            confirm = st.text_input("Confirm Password", type="password")
+            if st.form_submit_button("Register"):
+                if password != confirm:
+                    st.error("Passwords don't match")
+                elif len(username) < 3 or len(password) < 6:
+                    st.error("Username (3+) and password (6+) too short")
+                elif register_user(username, password):
+                    st.success("Account created! Please login")
                 else:
-                    if register_user(username, password):
-                        st.success("Registration successful! Please login.")
-                    else:
-                        st.error("Username already exists")
+                    st.error("Username taken")
 
 # Main App
 def main_app():
-    # Update user presence on every refresh
-    if "username" in st.session_state:
-        update_user_presence(st.session_state.username)
+    username = st.session_state.username
+    update_user_presence(username)
     
     # Check for unread messages
-    username = st.session_state.username
     if "current_chat" not in st.session_state:
         unread_from = check_unread_messages(username)
         if unread_from:
             st.session_state.current_chat = unread_from
-            # Mark as read
             data = load_chat_data()
             session_id = get_session(username, unread_from)
             data["sessions"][session_id]["unread"][username] = False
             save_chat_data(data)
             st.rerun()
     
-    # Sidebar with user info and controls
+    # Sidebar
     with st.sidebar:
         st.subheader(f"Hello, {username}!")
+        st.write("**Online Users**")
         
-        # Active users section
-        st.markdown("**Online Users**")
         data = load_chat_data()
-        active_users = []
-        for user, info in data.get("users", {}).items():
-            if user == username:
-                continue
-            last_seen_str = info.get("last_seen", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            try:
-                last_seen = datetime.strptime(last_seen_str, "%Y-%m-%d %H:%M:%S")
-                if (datetime.now() - last_seen).seconds < 300:  # 5 minutes
-                    active_users.append(user)
-            except:
-                active_users.append(user)
+        active_users = [u for u, info in data.get("users", {}).items() 
+                      if u != username and (datetime.now() - datetime.strptime(
+                      info.get("last_seen", datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
+                      "%Y-%m-%d %H:%M:%S")).seconds < 300]
         
-        if not active_users:
-            st.caption("No other users online")
-        else:
-            for user in active_users:
+        for user in active_users or ["No one online"]:
+            if user == "No one online":
+                st.caption(user)
+            else:
                 session_id = get_session(username, user)
                 unread = data["sessions"][session_id]["unread"].get(username, False)
-                if st.button(f"{user}{' 🔔' if unread else ''}", key=f"user_{user}", use_container_width=True):
+                if st.button(f"{user}{' 🔔' if unread else ''}"):
                     st.session_state.current_chat = user
-                    # Mark as read when opening
                     data["sessions"][session_id]["unread"][username] = False
                     save_chat_data(data)
                     st.rerun()
         
-        if "current_chat" in st.session_state:
-            if st.button("Leave Chat", use_container_width=True):
-                del st.session_state.current_chat
-                st.rerun()
-        
-        if st.button("Sign Out", use_container_width=True):
-            del st.session_state.username
-            del st.session_state.authenticated
+        if st.button("Sign Out"):
+            del st.session_state.username, st.session_state.authenticated
             if "current_chat" in st.session_state:
                 del st.session_state.current_chat
             st.rerun()
     
-    # Main chat area
+    # Chat Area
     if "current_chat" not in st.session_state:
-        st.info("← Select a user from the sidebar to start chatting")
+        st.info("← Select a user to chat")
         st.stop()
     
-    # Chat interface
     other_user = st.session_state.current_chat
     session_id = get_session(username, other_user)
     
     st.subheader(f"Chat with {other_user}")
-    
-    # Inject the JavaScript for timezone conversion
     st.markdown(timezone_js, unsafe_allow_html=True)
     
     # Display messages
-    data = load_chat_data()
-    messages = data["sessions"][session_id]["messages"]
-    
+    messages = load_chat_data()["sessions"][session_id]["messages"]
     for msg in messages:
-        # Convert server timestamp to ISO format for JavaScript
-        utc_timestamp = datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").isoformat() + "Z"
-        
+        utc_time = datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").isoformat() + "Z"
         if msg["sender"] == username:
             st.markdown(f"""
             <div class="message user-message">
-                <div class="timestamp" data-utc="{utc_timestamp}">Loading time...</div>
+                <div class="timestamp" data-utc="{utc_time}">
+                    {datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")}
+                </div>
                 {msg["message"]}
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
             <div class="message other-message">
-                <div class="timestamp" data-utc="{utc_timestamp}">{msg["sender"]} • Loading time...</div>
+                <div class="timestamp" data-utc="{utc_time}">
+                    {msg["sender"]} • {datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")}
+                </div>
                 {msg["message"]}
             </div>
             """, unsafe_allow_html=True)
     
     # Message input
     with st.form("message_form", clear_on_submit=True):
-        message = st.text_area("Type your message", height=100, key=f"msg_{session_id}", 
-                             placeholder="Write your message here...", label_visibility="collapsed")
-        col1, col2 = st.columns([3, 1])
-        with col2:
-            if st.form_submit_button("Send", use_container_width=True):
-                if message.strip():
-                    add_message(session_id, username, message.strip())
-                    st.rerun()
+        message = st.text_area("Message", placeholder="Type your message...", 
+                             height=100, label_visibility="collapsed")
+        if st.form_submit_button("Send") and message.strip():
+            add_message(session_id, username, message.strip())
+            st.rerun()
 
-# Main app flow
+# App flow
 def main():
     if not hasattr(st.session_state, 'authenticated') or not st.session_state.authenticated:
         auth_page()
