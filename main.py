@@ -1,11 +1,10 @@
 import streamlit as st
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 import os
 from streamlit_autorefresh import st_autorefresh
 import hashlib
 import hmac
-import time
 
 # Disable Streamlit default UI elements
 st.set_page_config(
@@ -82,70 +81,24 @@ hide_streamlit_style = """
 """
 
 # Apply CSS
-#st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Configuration
 CHAT_FILE = "private_chat_data.json"
 USER_FILE = "user_credentials.json"
-PRESENCE_FILE = "user_presence.json"  # Separate file for presence data
 REFRESH_INTERVAL = 2000  # milliseconds
-CACHE_TIMEOUT = 2  # seconds
 
 # Initialize data files if they don't exist
-for file in [CHAT_FILE, USER_FILE, PRESENCE_FILE]:
-    if not os.path.exists(file):
-        with open(file, "w") as f:
-            if file == CHAT_FILE:
-                json.dump({"sessions": {}}, f)
-            elif file == PRESENCE_FILE:
-                json.dump({}, f)
-            else:  # USER_FILE
-                json.dump({}, f)
+if not os.path.exists(CHAT_FILE):
+    with open(CHAT_FILE, "w") as f:
+        json.dump({"sessions": {}, "users": {}}, f)
+
+if not os.path.exists(USER_FILE):
+    with open(USER_FILE, "w") as f:
+        json.dump({}, f)
 
 # Auto-refresh the app
 st_autorefresh(interval=REFRESH_INTERVAL, limit=None, key="chat_refresh")
-
-# Caching for frequently accessed data
-@st.cache_resource(ttl=CACHE_TIMEOUT)
-def load_chat_data():
-    try:
-        with open(CHAT_FILE, "r") as f:
-            return json.load(f)
-    except Exception as e:
-        st.error(f"Error loading chat data: {e}")
-        return {"sessions": {}}
-
-@st.cache_resource(ttl=CACHE_TIMEOUT)
-def load_presence_data():
-    try:
-        with open(PRESENCE_FILE, "r") as f:
-            return json.load(f)
-    except Exception as e:
-        st.error(f"Error loading presence data: {e}")
-        return {}
-
-@st.cache_resource(ttl=300)  # Cache credentials longer
-def load_user_credentials():
-    try:
-        with open(USER_FILE, "r") as f:
-            return json.load(f)
-    except Exception as e:
-        st.error(f"Error loading user credentials: {e}")
-        return {}
-
-def save_chat_data(data):
-    try:
-        with open(CHAT_FILE, "w") as f:
-            json.dump(data, f)
-    except Exception as e:
-        st.error(f"Error saving chat data: {e}")
-
-def save_presence_data(data):
-    try:
-        with open(PRESENCE_FILE, "w") as f:
-            json.dump(data, f)
-    except Exception as e:
-        st.error(f"Error saving presence data: {e}")
 
 # Password hashing
 def hash_password(password):
@@ -173,7 +126,8 @@ def verify_password(stored_password, provided_password):
 
 # User registration
 def register_user(username, password):
-    users = load_user_credentials()
+    with open(USER_FILE, "r") as f:
+        users = json.load(f)
     
     if username in users:
         return False  # User already exists
@@ -183,27 +137,36 @@ def register_user(username, password):
         'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     
-    try:
-        with open(USER_FILE, "w") as f:
-            json.dump(users, f)
-    except Exception as e:
-        st.error(f"Error saving user credentials: {e}")
-        return False
+    with open(USER_FILE, "w") as f:
+        json.dump(users, f)
     
-    # Create presence record
+    # Create presence record in chat data
     update_user_presence(username)
+    
     return True
 
 # Update user presence
 def update_user_presence(username):
     """Update or create user presence record"""
-    presence_data = load_presence_data()
-    presence_data[username] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    save_presence_data(presence_data)
+    data = load_chat_data()
+    
+    # Initialize users dictionary if it doesn't exist
+    if "users" not in data:
+        data["users"] = {}
+    
+    # Create or update user record
+    if username not in data["users"]:
+        data["users"][username] = {}
+    
+    # Update last seen time
+    data["users"][username]["last_seen"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    save_chat_data(data)
 
 # User authentication
 def authenticate_user(username, password):
-    users = load_user_credentials()
+    with open(USER_FILE, "r") as f:
+        users = json.load(f)
     
     if username not in users:
         return False
@@ -211,44 +174,64 @@ def authenticate_user(username, password):
     stored_password = bytes.fromhex(users[username]['password'])
     return verify_password(stored_password, password)
 
+# Load chat data with migration for older versions
+def load_chat_data():
+    with open(CHAT_FILE, "r") as f:
+        data = json.load(f)
+    
+    # Migration: Add 'unread' field to existing sessions if missing
+    for session_id, session in data.get("sessions", {}).items():
+        if "unread" not in session:
+            session["unread"] = {
+                session["participants"][0]: False,
+                session["participants"][1]: False
+            }
+    
+    # Ensure users dictionary exists
+    if "users" not in data:
+        data["users"] = {}
+    
+    return data
+
+# Save chat data
+def save_chat_data(data):
+    with open(CHAT_FILE, "w") as f:
+        json.dump(data, f)
+
 # Get or create session between two users
 def get_session(user1, user2):
     session_id = f"{min(user1, user2)}_{max(user1, user2)}"
-    chat_data = load_chat_data()
+    data = load_chat_data()
     
-    if session_id not in chat_data["sessions"]:
-        chat_data["sessions"][session_id] = {
+    if session_id not in data["sessions"]:
+        data["sessions"][session_id] = {
             "participants": [user1, user2],
             "messages": [],
             "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "unread": {user1: False, user2: False}
         }
-        save_chat_data(chat_data)
-    elif "unread" not in chat_data["sessions"][session_id]:
-        # Ensure unread exists
-        chat_data["sessions"][session_id]["unread"] = {
+        save_chat_data(data)
+    elif "unread" not in data["sessions"][session_id]:
+        # Ensure unread exists (backward compatibility)
+        data["sessions"][session_id]["unread"] = {
             user1: False,
             user2: False
         }
-        save_chat_data(chat_data)
+        save_chat_data(data)
     
     return session_id
 
 # Add a new message to a session
 def add_message(session_id, sender, message):
-    chat_data = load_chat_data()
-    if session_id not in chat_data["sessions"]:
-        return
-    
-    session = chat_data["sessions"][session_id]
+    data = load_chat_data()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # Mark as unread for the recipient
-    participants = session["participants"]
+    participants = data["sessions"][session_id]["participants"]
     recipient = participants[0] if participants[1] == sender else participants[1]
-    session["unread"][recipient] = True
+    data["sessions"][session_id]["unread"][recipient] = True
     
-    session["messages"].append({
+    data["sessions"][session_id]["messages"].append({
         "sender": sender,
         "message": message,
         "timestamp": timestamp
@@ -257,12 +240,12 @@ def add_message(session_id, sender, message):
     # Update sender's presence
     update_user_presence(sender)
     
-    save_chat_data(chat_data)
+    save_chat_data(data)
 
 # Check if user has any unread messages
 def check_unread_messages(username):
-    chat_data = load_chat_data()
-    for session_id, session in chat_data.get("sessions", {}).items():
+    data = load_chat_data()
+    for session_id, session in data.get("sessions", {}).items():
         if username in session["participants"] and session["unread"].get(username, False):
             other_user = session["participants"][0] if session["participants"][1] == username else session["participants"][1]
             return other_user
@@ -314,6 +297,8 @@ def main_app():
         update_user_presence(st.session_state.username)
     
     st.title("🔒 Private Chat Sessions")
+    
+    # User management
     username = st.session_state.username
     
     # Check for unread messages and automatically open that chat
@@ -322,48 +307,44 @@ def main_app():
         if unread_from:
             st.session_state.current_chat = unread_from
             # Mark as read
-            chat_data = load_chat_data()
+            data = load_chat_data()
             session_id = get_session(username, unread_from)
-            if session_id in chat_data["sessions"]:
-                chat_data["sessions"][session_id]["unread"][username] = False
-                save_chat_data(chat_data)
+            data["sessions"][session_id]["unread"][username] = False
+            save_chat_data(data)
             st.rerun()
     
     # Sidebar with user info and controls
     with st.sidebar:
         st.subheader(f"Welcome, {username}!")
         
-        # Show active users
-        presence_data = load_presence_data()
+        # Show active users (excluding current user)
+        data = load_chat_data()
         active_users = []
-        current_time = datetime.now()
-        
-        for user, last_seen_str in presence_data.items():
+        for user, info in data.get("users", {}).items():
             if user == username:
                 continue
+            last_seen_str = info.get("last_seen", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             try:
                 last_seen = datetime.strptime(last_seen_str, "%Y-%m-%d %H:%M:%S")
-                if (current_time - last_seen) < timedelta(minutes=5):
+                if (datetime.now() - last_seen).seconds < 300:  # 5 minutes
                     active_users.append(user)
             except:
-                # If timestamp parsing fails, include user
+                # If there's an error parsing timestamp, include user anyway
                 active_users.append(user)
         
         st.write("**Start a private chat with:**")
         if not active_users:
             st.write("No other users online")
         else:
-            chat_data = load_chat_data()
             for user in active_users:
                 session_id = get_session(username, user)
-                unread = chat_data["sessions"].get(session_id, {}).get("unread", {}).get(username, False)
+                unread = data["sessions"][session_id]["unread"].get(username, False)
                 button_label = f"💬 {user}" + (" 🔔" if unread else "")
                 if st.button(button_label):
                     st.session_state.current_chat = user
                     # Mark as read when opening
-                    if session_id in chat_data["sessions"]:
-                        chat_data["sessions"][session_id]["unread"][username] = False
-                        save_chat_data(chat_data)
+                    data["sessions"][session_id]["unread"][username] = False
+                    save_chat_data(data)
                     st.rerun()
         
         if "current_chat" in st.session_state:
@@ -385,12 +366,12 @@ def main_app():
     
     other_user = st.session_state.current_chat
     session_id = get_session(username, other_user)
+    
     st.subheader(f"Private chat with {other_user}")
     
     # Display messages
-    chat_data = load_chat_data()
-    session = chat_data["sessions"].get(session_id, {})
-    messages = session.get("messages", [])
+    data = load_chat_data()
+    messages = data["sessions"][session_id]["messages"]
     
     for msg in messages:
         timestamp = msg["timestamp"]
