@@ -369,23 +369,23 @@ def main_app():
     messages = data["sessions"][session_id]["messages"]
     
     # In the message display section, use this format:
-for msg in messages:
-    timestamp = datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
-    if msg["sender"] == username:
+    for msg in messages:
+        
+     timestamp = datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
+     if msg["sender"] == username:
         st.markdown(f"""
         <div class="message user-message">
             <div style="font-size: 0.75rem; opacity: 0.8;">{timestamp}</div>
             {msg["message"]}
         </div>
         """, unsafe_allow_html=True)
-    else:
+     else:
         st.markdown(f"""
         <div class="message other-message">
             <div style="font-size: 0.75rem; opacity: 0.8;">{msg["sender"]} • {timestamp}</div>
             {msg["message"]}
         </div>
         """, unsafe_allow_html=True)
-        
     st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
     
     # Message input
