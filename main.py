@@ -6,7 +6,7 @@ from streamlit_autorefresh import st_autorefresh
 import hashlib
 import hmac
 
-# Disable Streamlit default UI elements
+# Configure page settings
 st.set_page_config(
     page_title="Secure Chat",
     page_icon="🔒",
@@ -14,74 +14,97 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS to hide all unnecessary bars
-hide_streamlit_style = """
+# Custom CSS for clean, spacious UI
+clean_style = """
 <style>
+    /* Hide all default Streamlit UI elements */
     footer {visibility: hidden;}
+    header {visibility: hidden;}
     
-    /* Dynamic black bar (5% of screen height) */
-    .footer-overlay {
-        position: fixed;
-        left: 0;
-        bottom: 0;
+    /* Main content area styling */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        padding-left: 3rem;
+        padding-right: 3rem;
+    }
+    
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+        padding: 2rem 1.5rem;
+    }
+    
+    /* Chat message styling */
+    .message {
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 0.75rem;
+        max-width: 70%;
+        word-wrap: break-word;
+    }
+    
+    .user-message {
+        background-color: #007bff;
+        color: white;
+        margin-left: auto;
+        border-bottom-right-radius: 0.25rem;
+    }
+    
+    .other-message {
+        background-color: #e9ecef;
+        color: black;
+        margin-right: auto;
+        border-bottom-left-radius: 0.25rem;
+    }
+    
+    /* Input area styling */
+    .stTextArea textarea {
+        min-height: 100px;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+    
+    /* Button styling */
+    .stButton button {
         width: 100%;
-        height: 5vh;
-        background-color: #000000;
-        z-index: 9999;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        transition: all 0.2s;
     }
     
-    /* Adjust main container to prevent content hiding */
-    .main .block-container {
-        padding-bottom: 6vh !important;
-    }
-    /* Hide header */
-    [data-testid="stToolbarActions"] {
-        display: none !important;
-    }
-    div._profileContainer_gzau3_53 {
-        display: none !important;
+    .stButton button:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
     }
     
-    /* Hide footer */
-    footer[data-testid="stFooter"] {
-        display: none !important;
+    /* Spacing utilities */
+    .spacer-sm {
+        height: 1rem;
     }
     
-    /* Hide status widget */
-    iframe[title="Streamlit Cloud Status"] {
-        display: none !important;
+    .spacer-md {
+        height: 2rem;
     }
     
-    /* Hide 'Manage app' button */
-    button[data-testid="manage-app-button"] {
-        display: none !important;
+    .spacer-lg {
+        height: 3rem;
     }
     
-    /* Adjust main container padding */
-    .main .block-container {
-        padding-top: 0rem;
-        padding-bottom: 0rem;
+    /* Remove extra padding from tabs */
+    [data-baseweb="tab-list"] {
+        gap: 0.5rem;
     }
     
-    /* Hide hamburger menu */
-    #MainMenu {
-        visibility: hidden;
+    [data-baseweb="tab"] {
+        padding: 0.5rem 1rem;
+        margin: 0;
     }
-    
-    /* Hide Streamlit logo in tab */
-    [data-testid="stAppViewContainer"] > div:first-child {
-        display: none;
-    }
-
-    [class="_profileContainer_gzau3_53"] > div:first-child {
-        display: none !important;
-    }
-    
 </style>
 """
 
 # Apply CSS
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown(clean_style, unsafe_allow_html=True)
 
 # Configuration
 CHAT_FILE = "private_chat_data.json"
@@ -100,7 +123,7 @@ if not os.path.exists(USER_FILE):
 # Auto-refresh the app
 st_autorefresh(interval=REFRESH_INTERVAL, limit=None, key="chat_refresh")
 
-# Password hashing
+# Password hashing functions (unchanged)
 def hash_password(password):
     """Hash a password for storing."""
     salt = os.urandom(32)
@@ -124,7 +147,7 @@ def verify_password(stored_password, provided_password):
     )
     return hmac.compare_digest(stored_key, new_key)
 
-# User registration
+# User registration (unchanged)
 def register_user(username, password):
     with open(USER_FILE, "r") as f:
         users = json.load(f)
@@ -145,7 +168,7 @@ def register_user(username, password):
     
     return True
 
-# Update user presence
+# Update user presence (unchanged)
 def update_user_presence(username):
     """Update or create user presence record"""
     data = load_chat_data()
@@ -163,7 +186,7 @@ def update_user_presence(username):
     
     save_chat_data(data)
 
-# User authentication
+# User authentication (unchanged)
 def authenticate_user(username, password):
     with open(USER_FILE, "r") as f:
         users = json.load(f)
@@ -174,7 +197,7 @@ def authenticate_user(username, password):
     stored_password = bytes.fromhex(users[username]['password'])
     return verify_password(stored_password, password)
 
-# Load chat data with migration for older versions
+# Load chat data (unchanged)
 def load_chat_data():
     with open(CHAT_FILE, "r") as f:
         data = json.load(f)
@@ -193,12 +216,12 @@ def load_chat_data():
     
     return data
 
-# Save chat data
+# Save chat data (unchanged)
 def save_chat_data(data):
     with open(CHAT_FILE, "w") as f:
         json.dump(data, f)
 
-# Get or create session between two users
+# Get or create session (unchanged)
 def get_session(user1, user2):
     session_id = f"{min(user1, user2)}_{max(user1, user2)}"
     data = load_chat_data()
@@ -221,7 +244,7 @@ def get_session(user1, user2):
     
     return session_id
 
-# Add a new message to a session
+# Add a new message (unchanged)
 def add_message(session_id, sender, message):
     data = load_chat_data()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -242,7 +265,7 @@ def add_message(session_id, sender, message):
     
     save_chat_data(data)
 
-# Check if user has any unread messages
+# Check unread messages (unchanged)
 def check_unread_messages(username):
     data = load_chat_data()
     for session_id, session in data.get("sessions", {}).items():
@@ -251,21 +274,22 @@ def check_unread_messages(username):
             return other_user
     return None
 
-# Authentication page
+# Improved Authentication Page
 def auth_page():
-    st.title("🔒 Secure Chat Authentication")
+    st.title("Secure Chat")
+    st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
     
     tab1, tab2 = st.tabs(["Login", "Register"])
     
     with tab1:
+        st.subheader("Welcome back")
         with st.form("login_form"):
             username = st.text_input("Username", key="login_username")
             password = st.text_input("Password", type="password", key="login_password")
-            if st.form_submit_button("Login"):
+            st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
+            if st.form_submit_button("Login", use_container_width=True):
                 if authenticate_user(username, password):
-                    # Update user presence
                     update_user_presence(username)
-                    
                     st.session_state.username = username
                     st.session_state.authenticated = True
                     st.rerun()
@@ -273,11 +297,13 @@ def auth_page():
                     st.error("Invalid username or password")
     
     with tab2:
+        st.subheader("Create an account")
         with st.form("register_form"):
             username = st.text_input("Username", key="register_username")
             password = st.text_input("Password", type="password", key="register_password")
             confirm_password = st.text_input("Confirm Password", type="password", key="confirm_password")
-            if st.form_submit_button("Register"):
+            st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
+            if st.form_submit_button("Register", use_container_width=True):
                 if password != confirm_password:
                     st.error("Passwords do not match")
                 elif len(username) < 3:
@@ -290,18 +316,14 @@ def auth_page():
                     else:
                         st.error("Username already exists")
 
-# Main chat app
+# Improved Main App
 def main_app():
     # Update user presence on every refresh
     if "username" in st.session_state:
         update_user_presence(st.session_state.username)
     
-    st.title("🔒 Private Chat Sessions")
-    
-    # User management
+    # Check for unread messages
     username = st.session_state.username
-    
-    # Check for unread messages and automatically open that chat
     if "current_chat" not in st.session_state:
         unread_from = check_unread_messages(username)
         if unread_from:
@@ -315,9 +337,11 @@ def main_app():
     
     # Sidebar with user info and controls
     with st.sidebar:
-        st.subheader(f"Welcome, {username}!")
+        st.subheader(f"Hello, {username}!")
+        st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
         
-        # Show active users (excluding current user)
+        # Active users section
+        st.markdown("**Online Users**")
         data = load_chat_data()
         active_users = []
         for user, info in data.get("users", {}).items():
@@ -329,72 +353,86 @@ def main_app():
                 if (datetime.now() - last_seen).seconds < 300:  # 5 minutes
                     active_users.append(user)
             except:
-                # If there's an error parsing timestamp, include user anyway
                 active_users.append(user)
         
-        st.write("**Start a private chat with:**")
         if not active_users:
-            st.write("No other users online")
+            st.caption("No other users online")
         else:
             for user in active_users:
                 session_id = get_session(username, user)
                 unread = data["sessions"][session_id]["unread"].get(username, False)
-                button_label = f"💬 {user}" + (" 🔔" if unread else "")
-                if st.button(button_label):
+                if st.button(f"{user}{' 🔔' if unread else ''}", key=f"user_{user}", use_container_width=True):
                     st.session_state.current_chat = user
                     # Mark as read when opening
                     data["sessions"][session_id]["unread"][username] = False
                     save_chat_data(data)
                     st.rerun()
         
+        st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
+        
         if "current_chat" in st.session_state:
-            if st.button("Leave Current Chat"):
+            if st.button("Leave Chat", use_container_width=True):
                 del st.session_state.current_chat
                 st.rerun()
         
-        if st.button("Sign Out"):
+        if st.button("Sign Out", use_container_width=True):
             del st.session_state.username
             del st.session_state.authenticated
             if "current_chat" in st.session_state:
                 del st.session_state.current_chat
             st.rerun()
     
-    # Chat interface
+    # Main chat area
     if "current_chat" not in st.session_state:
-        st.info("Select a user from the sidebar to start chatting")
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown('<div class="spacer-lg"></div>', unsafe_allow_html=True)
+            st.image("https://cdn-icons-png.flaticon.com/512/2462/2462719.png", width=150)
+            st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
+            st.subheader("Select a user to start chatting")
+            st.caption("Choose someone from the sidebar to begin your conversation")
         st.stop()
     
+    # Chat interface
     other_user = st.session_state.current_chat
     session_id = get_session(username, other_user)
     
-    st.subheader(f"Private chat with {other_user}")
+    st.subheader(f"Chat with {other_user}")
+    st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
     
     # Display messages
     data = load_chat_data()
     messages = data["sessions"][session_id]["messages"]
     
     for msg in messages:
-        timestamp = msg["timestamp"]
+        timestamp = datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
         if msg["sender"] == username:
             st.markdown(f"""
-            <div style="background-color: #0068c9; color: white; padding: 10px; border-radius: 10px 0px 10px 10px; margin: 5px 0; margin-left: 20%; text-align: right;">
-                <strong>You ({timestamp}):</strong> {msg["message"]}
+            <div class="message user-message">
+                <div style="font-size: 0.8rem; opacity: 0.8;">{timestamp}</div>
+                <div>{msg["message"]}</div>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
-            <div style="background-color: #2d3741; color: white; padding: 10px; border-radius: 0px 10px 10px 10px; margin: 5px 0; margin-right: 20%;">
-                <strong>{msg["sender"]} ({timestamp}):</strong> {msg["message"]}
+            <div class="message other-message">
+                <div style="font-size: 0.8rem; opacity: 0.8;">{msg["sender"]} • {timestamp}</div>
+                <div>{msg["message"]}</div>
             </div>
             """, unsafe_allow_html=True)
     
-    # Send message form
-    with st.form("message_form"):
-        message = st.text_area("Type your private message", height=100, key=f"msg_{session_id}")
-        if st.form_submit_button("Send"):
-            if message.strip():
-                add_message(session_id, username, message.strip())
-                st.rerun()
+    st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
+    
+    # Message input
+    with st.form("message_form", clear_on_submit=True):
+        message = st.text_area("Type your message", height=100, key=f"msg_{session_id}", 
+                             placeholder="Write your message here...", label_visibility="collapsed")
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            if st.form_submit_button("Send", use_container_width=True):
+                if message.strip():
+                    add_message(session_id, username, message.strip())
+                    st.rerun()
 
 # Main app flow
 def main():
