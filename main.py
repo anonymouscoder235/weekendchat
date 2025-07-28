@@ -404,9 +404,9 @@ def main_app():
     if "current_chat" not in st.session_state:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown('<div class="spacer-lg"></div>', unsafe_allow_html=True)
+            #st.markdown('<div class="spacer-lg"></div>', unsafe_allow_html=True)
             st.image("https://cdn-icons-png.flaticon.com/512/2462/2462719.png", width=150)
-            st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
+            #st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
             st.subheader("Select a user to start chatting")
             st.caption("Choose someone from the sidebar to begin your conversation")
         st.stop()
