@@ -18,6 +18,8 @@ st.set_page_config(
 clean_style = """
 <style>
     /* Hide all default Streamlit UI elements */
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     
     /* Main content area styling - reduced padding */
     .main .block-container {
@@ -118,7 +120,56 @@ clean_style = """
         color: black;
         border: 1px solid #e9ecef;
     }
+    
+    /* Timestamp styling */
+    .timestamp {
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
 </style>
+"""
+
+# JavaScript for client-side timezone conversion
+timezone_js = """
+<script>
+// Function to convert UTC timestamp to local time
+function convertTimestamps() {
+    // Get all elements with data-utc attribute
+    const timeElements = document.querySelectorAll('[data-utc]');
+    
+    timeElements.forEach(element => {
+        const utcTimestamp = element.getAttribute('data-utc');
+        if (utcTimestamp) {
+            try {
+                const date = new Date(utcTimestamp);
+                const options = { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: false
+                };
+                const localTime = date.toLocaleTimeString(undefined, options);
+                
+                // Check if we need to show sender name
+                const currentText = element.textContent;
+                if (currentText.includes('•')) {
+                    const sender = currentText.split('•')[0].trim();
+                    element.textContent = `${sender} • ${localTime}`;
+                } else {
+                    element.textContent = localTime;
+                }
+            } catch (e) {
+                console.error('Error converting timestamp:', e);
+            }
+        }
+    });
+}
+
+// Run the conversion when page loads
+document.addEventListener('DOMContentLoaded', convertTimestamps);
+
+// Also run after Streamlit updates the DOM
+document.addEventListener('streamlit:render', convertTimestamps);
+</script>
 """
 
 # Apply CSS
@@ -141,7 +192,7 @@ if not os.path.exists(USER_FILE):
 # Auto-refresh the app
 st_autorefresh(interval=REFRESH_INTERVAL, limit=None, key="chat_refresh")
 
-# Password hashing functions (unchanged)
+# Password hashing functions
 def hash_password(password):
     """Hash a password for storing."""
     salt = os.urandom(32)
@@ -165,7 +216,7 @@ def verify_password(stored_password, provided_password):
     )
     return hmac.compare_digest(stored_key, new_key)
 
-# User registration (unchanged)
+# User registration
 def register_user(username, password):
     with open(USER_FILE, "r") as f:
         users = json.load(f)
@@ -186,7 +237,7 @@ def register_user(username, password):
     
     return True
 
-# Update user presence (unchanged)
+# Update user presence
 def update_user_presence(username):
     """Update or create user presence record"""
     data = load_chat_data()
@@ -204,7 +255,7 @@ def update_user_presence(username):
     
     save_chat_data(data)
 
-# User authentication (unchanged)
+# User authentication
 def authenticate_user(username, password):
     with open(USER_FILE, "r") as f:
         users = json.load(f)
@@ -215,7 +266,7 @@ def authenticate_user(username, password):
     stored_password = bytes.fromhex(users[username]['password'])
     return verify_password(stored_password, password)
 
-# Load chat data (unchanged)
+# Load chat data
 def load_chat_data():
     with open(CHAT_FILE, "r") as f:
         data = json.load(f)
@@ -234,12 +285,12 @@ def load_chat_data():
     
     return data
 
-# Save chat data (unchanged)
+# Save chat data
 def save_chat_data(data):
     with open(CHAT_FILE, "w") as f:
         json.dump(data, f)
 
-# Get or create session (unchanged)
+# Get or create session
 def get_session(user1, user2):
     session_id = f"{min(user1, user2)}_{max(user1, user2)}"
     data = load_chat_data()
@@ -262,7 +313,7 @@ def get_session(user1, user2):
     
     return session_id
 
-# Add a new message (unchanged)
+# Add a new message
 def add_message(session_id, sender, message):
     data = load_chat_data()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -283,7 +334,7 @@ def add_message(session_id, sender, message):
     
     save_chat_data(data)
 
-# Check unread messages (unchanged)
+# Check unread messages
 def check_unread_messages(username):
     data = load_chat_data()
     for session_id, session in data.get("sessions", {}).items():
@@ -292,10 +343,9 @@ def check_unread_messages(username):
             return other_user
     return None
 
-# Improved Authentication Page
+# Authentication Page
 def auth_page():
     st.title("Secure Chat")
-    st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
     
     tab1, tab2 = st.tabs(["Login", "Register"])
     
@@ -304,7 +354,6 @@ def auth_page():
         with st.form("login_form"):
             username = st.text_input("Username", key="login_username")
             password = st.text_input("Password", type="password", key="login_password")
-            st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
             if st.form_submit_button("Login", use_container_width=True):
                 if authenticate_user(username, password):
                     update_user_presence(username)
@@ -320,7 +369,6 @@ def auth_page():
             username = st.text_input("Username", key="register_username")
             password = st.text_input("Password", type="password", key="register_password")
             confirm_password = st.text_input("Confirm Password", type="password", key="confirm_password")
-            st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
             if st.form_submit_button("Register", use_container_width=True):
                 if password != confirm_password:
                     st.error("Passwords do not match")
@@ -334,7 +382,7 @@ def auth_page():
                     else:
                         st.error("Username already exists")
 
-# Improved Main App
+# Main App
 def main_app():
     # Update user presence on every refresh
     if "username" in st.session_state:
@@ -356,7 +404,6 @@ def main_app():
     # Sidebar with user info and controls
     with st.sidebar:
         st.subheader(f"Hello, {username}!")
-        st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
         
         # Active users section
         st.markdown("**Online Users**")
@@ -386,8 +433,6 @@ def main_app():
                     save_chat_data(data)
                     st.rerun()
         
-        st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
-        
         if "current_chat" in st.session_state:
             if st.button("Leave Chat", use_container_width=True):
                 del st.session_state.current_chat
@@ -402,13 +447,7 @@ def main_app():
     
     # Main chat area
     if "current_chat" not in st.session_state:
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            #st.markdown('<div class="spacer-lg"></div>', unsafe_allow_html=True)
-            st.image("https://cdn-icons-png.flaticon.com/512/2462/2462719.png", width=150)
-            #st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
-            st.subheader("Select a user to start chatting")
-            st.caption("Choose someone from the sidebar to begin your conversation")
+        st.info("← Select a user from the sidebar to start chatting")
         st.stop()
     
     # Chat interface
@@ -416,31 +455,32 @@ def main_app():
     session_id = get_session(username, other_user)
     
     st.subheader(f"Chat with {other_user}")
-    st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
+    
+    # Inject the JavaScript for timezone conversion
+    st.markdown(timezone_js, unsafe_allow_html=True)
     
     # Display messages
     data = load_chat_data()
     messages = data["sessions"][session_id]["messages"]
     
-    # In the message display section, use this format:
     for msg in messages:
+        # Convert server timestamp to ISO format for JavaScript
+        utc_timestamp = datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").isoformat() + "Z"
         
-     timestamp = datetime.strptime(msg["timestamp"], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
-     if msg["sender"] == username:
-        st.markdown(f"""
-        <div class="message user-message">
-            <div style="font-size: 0.75rem; opacity: 0.8;">{timestamp}</div>
-            {msg["message"]}
-        </div>
-        """, unsafe_allow_html=True)
-     else:
-        st.markdown(f"""
-        <div class="message other-message">
-            <div style="font-size: 0.75rem; opacity: 0.8;">{msg["sender"]} • {timestamp}</div>
-            {msg["message"]}
-        </div>
-        """, unsafe_allow_html=True)
-    st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
+        if msg["sender"] == username:
+            st.markdown(f"""
+            <div class="message user-message">
+                <div class="timestamp" data-utc="{utc_timestamp}">Loading time...</div>
+                {msg["message"]}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="message other-message">
+                <div class="timestamp" data-utc="{utc_timestamp}">{msg["sender"]} • Loading time...</div>
+                {msg["message"]}
+            </div>
+            """, unsafe_allow_html=True)
     
     # Message input
     with st.form("message_form", clear_on_submit=True):
