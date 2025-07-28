@@ -82,7 +82,7 @@ hide_streamlit_style = """
 """
 
 # Apply CSS
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+#st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Configuration
 CHAT_FILE = "private_chat_data.json"
