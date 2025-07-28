@@ -444,7 +444,7 @@ def main_app():
     
     # Message input
     with st.form("message_form", clear_on_submit=True):
-        message = st.text_area("Type your message", height=100, key=f"msg_{session_id}", 
+        message = st.text_area("Type your message", height=30, key=f"msg_{session_id}", 
                              placeholder="Write your message here...", label_visibility="collapsed")
         col1, col2 = st.columns([3, 1])
         with col2:
