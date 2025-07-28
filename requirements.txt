@@ -1,0 +1,5 @@
+spotify
+pandas
+spotipy
+streamlit
+streamlit-autorefresh
