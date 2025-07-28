@@ -18,8 +18,7 @@ st.set_page_config(
 clean_style = """
 <style>
     /* Hide all default Streamlit UI elements */
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    
     
     /* Main content area styling - reduced padding */
     .main .block-container {
