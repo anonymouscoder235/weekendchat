@@ -4,10 +4,7 @@ import json
 import os
 import hashlib
 import hmac
-import time
-from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.scriptrunner.script_run_context import get_script_run_ctx
-from streamlit.web.server.websocket_headers import _get_websocket_headers
+from streamlit_autorefresh import st_autorefresh
 
 # Configure page settings
 st.set_page_config(
@@ -20,7 +17,76 @@ st.set_page_config(
 # Custom CSS for clean UI
 clean_style = """
 <style>
-    /* [CSS remains the same] */
+    /* Hide default UI elements */
+    
+    /* Main content styling */
+    .main .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+    
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        padding: 1rem 1rem;
+    }
+    
+    /* Dark mode support */
+    [theme="dark"] [data-testid="stSidebar"] {
+        background-color: #1a1a1a;
+    }
+    [theme="light"] [data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+    }
+    
+    /* Message bubbles */
+    .message {
+        padding: 0.5rem 0.75rem;
+        margin: 0.25rem 0;
+        border-radius: 0.5rem;
+        max-width: 70%;
+        word-wrap: break-word;
+        line-height: 1.4;
+    }
+    .user-message {
+        background-color: #007bff;
+        color: white;
+        margin-left: auto;
+    }
+    .other-message {
+        background-color: #e9ecef;
+        color: black;
+        margin-right: auto;
+    }
+    [theme="dark"] .other-message {
+        background-color: #2d3741;
+        color: white;
+    }
+    
+    /* Timestamp styling */
+    .timestamp {
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+    
+    /* Input area */
+    .stTextArea textarea {
+        min-height: 80px;
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+    }
+    
+    /* Buttons */
+    .stButton button {
+        width: 100%;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+    }
+    [theme="dark"] .stButton button {
+        background-color: #2d3741;
+        color: white;
+    }
 </style>
 """
 
@@ -57,6 +123,7 @@ st.markdown(clean_style, unsafe_allow_html=True)
 # Configuration
 CHAT_FILE = "private_chat_data.json"
 USER_FILE = "user_credentials.json"
+REFRESH_INTERVAL = 2000  # milliseconds
 
 # Initialize data files
 if not os.path.exists(CHAT_FILE):
@@ -151,9 +218,6 @@ def add_message(session_id, sender, message):
     })
     update_user_presence(sender)
     save_chat_data(data)
-    
-    # Trigger update for recipient
-    st.session_state.need_refresh = True
 
 def check_unread_messages(username):
     data = load_chat_data()
@@ -207,9 +271,14 @@ def main_app():
     username = st.session_state.username
     update_user_presence(username)
     
-    # Initialize refresh state
-    if 'need_refresh' not in st.session_state:
-        st.session_state.need_refresh = False
+    # Initialize refresh counter
+    if 'refresh_count' not in st.session_state:
+        st.session_state.refresh_count = 0
+    
+    # Auto-refresh only when needed
+    refresh_interval = REFRESH_INTERVAL
+    refresh_key = f"autorefresh_{st.session_state.refresh_count}"
+    refresh_triggered = st_autorefresh(interval=refresh_interval, limit=None, key=refresh_key)
     
     # Check for unread messages
     if "current_chat" not in st.session_state:
@@ -243,7 +312,6 @@ def main_app():
                     st.session_state.current_chat = user
                     data["sessions"][session_id]["unread"][username] = False
                     save_chat_data(data)
-                    st.session_state.need_refresh = False
                     st.rerun()
         
         if st.button("Sign Out"):
@@ -292,31 +360,15 @@ def main_app():
                              height=100, label_visibility="collapsed")
         if st.form_submit_button("Send") and message.strip():
             add_message(session_id, username, message.strip())
-            st.session_state.need_refresh = False
+            # Increment refresh count to reset auto-refresh
+            st.session_state.refresh_count += 1
             st.rerun()
     
-    # Websocket-based refresh
-    ctx = get_script_run_ctx()
-    if ctx:
-        headers = _get_websocket_headers()
-        if headers and "Sec-Websocket-Key" in headers:
-            # Create a placeholder that will trigger refresh
-            refresh_placeholder = st.empty()
-            
-            # Listen for refresh flag
-            if st.session_state.need_refresh:
-                st.session_state.need_refresh = False
-                st.rerun()
-            
-            # Check for new messages periodically
-            if has_new_messages(username):
-                st.session_state.need_refresh = True
-                st.rerun()
-    
-    # Fallback to polling if websockets not available
-    else:
-        if has_new_messages(username):
-            st.rerun()
+    # Check if we need to force a refresh for new messages
+    if has_new_messages(username):
+        # Increment refresh count to trigger immediate update
+        st.session_state.refresh_count += 1
+        st.rerun()
 
 # App flow
 def main():
