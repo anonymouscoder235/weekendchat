@@ -45,11 +45,10 @@ clean_style = """
         padding: 0.5rem 0.75rem;
         margin: 0.25rem 0;
         border-radius: 0.5rem;
-        max-width: 80%;
+        max-width: 70%;
         word-wrap: break-word;
         line-height: 1.4;
     }
-
     .user-message {
         background-color: #007bff;
         color: white;
