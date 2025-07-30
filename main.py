@@ -271,6 +271,10 @@ def main_app():
     username = st.session_state.username
     update_user_presence(username)
     
+    # Initialize last message check time
+    if 'last_check' not in st.session_state:
+        st.session_state.last_check = time.time()
+    
     # Check for unread messages
     if "current_chat" not in st.session_state:
         unread_from = check_unread_messages(username)
@@ -303,6 +307,7 @@ def main_app():
                     st.session_state.current_chat = user
                     data["sessions"][session_id]["unread"][username] = False
                     save_chat_data(data)
+                    st.session_state.last_check = time.time()  # Reset check time on interaction
                     st.rerun()
         
         if st.button("Sign Out"):
@@ -351,11 +356,38 @@ def main_app():
                              height=100, label_visibility="collapsed")
         if st.form_submit_button("Send") and message.strip():
             add_message(session_id, username, message.strip())
+            st.session_state.last_check = time.time()  # Reset check time on send
             st.rerun()
     
-    # Conditional auto-refresh - only refresh if there are new messages
-    if has_new_messages(username):
-        st.rerun()
+    # Check for new messages periodically
+    current_time = time.time()
+    if current_time - st.session_state.last_check > 2:  # Check every 2 seconds
+        if has_new_messages(username):
+            st.session_state.last_check = current_time
+            st.rerun()
+        st.session_state.last_check = current_time
+    
+    # Inject JavaScript to auto-refresh when new messages arrive
+    st.markdown("""
+    <script>
+    // Check for new messages every 2 seconds
+    function checkNewMessages() {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', window.location.href, false);
+        xhr.send();
+        
+        // Check if the response contains unread messages
+        if (xhr.responseText.includes('🔔')) {
+            window.location.reload();
+        }
+    }
+    
+    // Start checking after initial load
+    setTimeout(() => {
+        setInterval(checkNewMessages, 2000);
+    }, 2000);
+    </script>
+    """, unsafe_allow_html=True)
 
 # App flow
 def main():
