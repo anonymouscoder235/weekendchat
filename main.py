@@ -2,9 +2,9 @@ import streamlit as st
 from datetime import datetime
 import json
 import os
+from streamlit_autorefresh import st_autorefresh
 import hashlib
 import hmac
-from streamlit_autorefresh import st_autorefresh
 
 # Configure page settings
 st.set_page_config(
@@ -134,6 +134,9 @@ if not os.path.exists(USER_FILE):
     with open(USER_FILE, "w") as f:
         json.dump({}, f)
 
+# Auto-refresh
+st_autorefresh(interval=REFRESH_INTERVAL, limit=None, key="chat_refresh")
+
 # Password hashing
 def hash_password(password):
     salt = os.urandom(32)
@@ -226,14 +229,6 @@ def check_unread_messages(username):
             return session["participants"][0] if session["participants"][1] == username else session["participants"][1]
     return None
 
-def has_new_messages(username):
-    """Check if there are any new messages for the user"""
-    data = load_chat_data()
-    for session in data.get("sessions", {}).values():
-        if username in session["participants"] and session["unread"].get(username, False):
-            return True
-    return False
-
 # Authentication Page
 def auth_page():
     st.title("Secure Chat")
@@ -270,15 +265,6 @@ def auth_page():
 def main_app():
     username = st.session_state.username
     update_user_presence(username)
-    
-    # Initialize refresh counter
-    if 'refresh_count' not in st.session_state:
-        st.session_state.refresh_count = 0
-    
-    # Auto-refresh only when needed
-    refresh_interval = REFRESH_INTERVAL
-    refresh_key = f"autorefresh_{st.session_state.refresh_count}"
-    refresh_triggered = st_autorefresh(interval=refresh_interval, limit=None, key=refresh_key)
     
     # Check for unread messages
     if "current_chat" not in st.session_state:
@@ -360,15 +346,7 @@ def main_app():
                              height=100, label_visibility="collapsed")
         if st.form_submit_button("Send") and message.strip():
             add_message(session_id, username, message.strip())
-            # Increment refresh count to reset auto-refresh
-            st.session_state.refresh_count += 1
             st.rerun()
-    
-    # Check if we need to force a refresh for new messages
-    if has_new_messages(username):
-        # Increment refresh count to trigger immediate update
-        st.session_state.refresh_count += 1
-        st.rerun()
 
 # App flow
 def main():
