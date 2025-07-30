@@ -134,9 +134,6 @@ if not os.path.exists(USER_FILE):
     with open(USER_FILE, "w") as f:
         json.dump({}, f)
 
-# Auto-refresh
-st_autorefresh(interval=REFRESH_INTERVAL, limit=None, key="chat_refresh")
-
 # Password hashing
 def hash_password(password):
     salt = os.urandom(32)
@@ -228,6 +225,14 @@ def check_unread_messages(username):
         if username in session["participants"] and session["unread"].get(username, False):
             return session["participants"][0] if session["participants"][1] == username else session["participants"][1]
     return None
+
+def has_new_messages(username):
+    """Check if there are any new messages for the user"""
+    data = load_chat_data()
+    for session in data.get("sessions", {}).values():
+        if username in session["participants"] and session["unread"].get(username, False):
+            return True
+    return False
 
 # Authentication Page
 def auth_page():
@@ -347,6 +352,10 @@ def main_app():
         if st.form_submit_button("Send") and message.strip():
             add_message(session_id, username, message.strip())
             st.rerun()
+    
+    # Conditional auto-refresh - only refresh if there are new messages
+    if has_new_messages(username):
+        st.rerun()
 
 # App flow
 def main():
