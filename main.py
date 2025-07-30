@@ -42,13 +42,16 @@ clean_style = """
     
     /* Message bubbles */
     .message {
+        display: inline-block;
         padding: 0.5rem 0.75rem;
         margin: 0.25rem 0;
         border-radius: 0.5rem;
-        max-width: 70%;
+        max-width: 80%;
         word-wrap: break-word;
         line-height: 1.4;
+        white-space: pre-wrap;
     }
+
     .user-message {
         background-color: #007bff;
         color: white;
