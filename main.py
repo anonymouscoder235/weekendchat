@@ -5,6 +5,7 @@ import os
 from streamlit_autorefresh import st_autorefresh
 import hashlib
 import hmac
+import time
 
 # Configure page settings
 st.set_page_config(
