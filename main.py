@@ -48,7 +48,6 @@ clean_style = """
         max-width: 80%;
         word-wrap: break-word;
         line-height: 1.4;
-        white-space: pre-wrap;
     }
 
     .user-message {
